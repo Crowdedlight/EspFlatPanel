@@ -7,6 +7,7 @@
 #include "AsyncUDP.h"
 #include "config.h"
 #include "ArduinoJson.h"
+#include "FastLED.h"
 
 // enable debugging values
 const bool DEBUG = true;
@@ -26,20 +27,54 @@ WebServer server(alpacaPort);
 unsigned long last_blink;
 int led_state;
 
+// STATES
+enum States: int {
+  NOT_PRESENT = 0, 
+  OFF = 1, 
+  NOT_READY = 2, 
+  READY = 3, 
+  UNKNOWN = 4, 
+  ERROR = 5
+};
+
 // LED CONTROL - FASTLED
+#define DATA_PIN  5
+#define CLOCK_PIN 13
+
+#define NUM_LEDS    50
+#define LED_TYPE    APA102
+#define COLOR_ORDER GRB
+CRGB leds[NUM_LEDS];
+#define UPDATES_PER_SECOND 100
+
 // hardcode colour to neutral white
+// RGB(252, 250, 246), #FCFAF6 
+CRGB NEUTRAL_WHITE = CRGB( 252, 250, 246);
 
 // default is that the LEDs are off, waiting for commands to turn on
+unsigned int MaxBrightness = 255;
+unsigned int CalibratorState = States::OFF;
 
 /*
 ******* REMEMBER TO EDIT CONFIG.H FOR YOUR CONFIGURATION *******
 */
 
+// API callbacks
+void handleNotFound();
 void discoveryRequest(AsyncUDPPacket &packet);
 void ConfiguredDevicesRequest();
 void ApiVersionsRequest();
 void DescriptionRequest();
-void handleNotFound();
+void BrightnessRequest();
+void CalibratorStateRequest();
+void CoverStateRequest();
+void MaxBrightnessRequest();
+void CalibratorOffRequest();
+void CalibratorOnRequest();
+
+// Control functions
+void TurnOn(int brightness);
+void TurnOff();
 
 void setup ()
 {
@@ -51,6 +86,14 @@ void setup ()
   last_blink = millis();
   led_state = HIGH;
   digitalWrite(LED_BUILTIN, led_state);
+
+  // safety startup delay
+  delay(2000);
+
+  // setup LEDs
+  FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);  // BGR ordering is typical
+  // clear all data and push to LEDs. So we start with them turned off. 
+  FastLED.clear(true);
 
   // setup WIFI
   WiFi.mode(WIFI_STA);
@@ -250,4 +293,217 @@ void ConfiguredDevicesRequest() {
 
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", output);
+}
+
+void BrightnessRequest() {
+  Serial.println("Received 'Brightness' request");
+  Serial.flush();
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  // handle arguments/parameters of: ClientID & ClientTransactionID
+  if (server.hasArg("ClientID")) {
+    doc["ClientID"] = server.arg("ClientID");
+  }  
+  if (server.hasArg("ClientTransactionID")) {
+    doc["ClientTransactionID"] = server.arg("ClientTransactionID");
+  }
+
+  doc["ErrorNumber"] = 0;
+  doc["ErrorMessage"] = "";
+  doc["Value"] = FastLED.getBrightness();  
+
+  String output;
+  serializeJson(doc, output);
+
+  if (DEBUG) {
+    serializeJson(doc, Serial);
+  }
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", output);
+}
+
+void CalibratorStateRequest() {
+  Serial.println("Received 'CalibratorState' request");
+  Serial.flush();
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  // handle arguments/parameters of: ClientID & ClientTransactionID
+  if (server.hasArg("ClientID")) {
+    doc["ClientID"] = server.arg("ClientID");
+  }  
+  if (server.hasArg("ClientTransactionID")) {
+    doc["ClientTransactionID"] = server.arg("ClientTransactionID");
+  }
+
+  doc["ErrorNumber"] = 0;
+  doc["ErrorMessage"] = "";
+  doc["Value"] = CalibratorState;  
+
+  String output;
+  serializeJson(doc, output);
+
+  if (DEBUG) {
+    serializeJson(doc, Serial);
+  }
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", output);
+}
+
+void CoverStateRequest() {
+  Serial.println("Received 'CoverState' request");
+  Serial.flush();
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  // handle arguments/parameters of: ClientID & ClientTransactionID
+  if (server.hasArg("ClientID")) {
+    doc["ClientID"] = server.arg("ClientID");
+  }  
+  if (server.hasArg("ClientTransactionID")) {
+    doc["ClientTransactionID"] = server.arg("ClientTransactionID");
+  }
+
+  doc["ErrorNumber"] = 0;
+  doc["ErrorMessage"] = "";
+  doc["Value"] = States::NOT_PRESENT;  
+
+  String output;
+  serializeJson(doc, output);
+
+  if (DEBUG) {
+    serializeJson(doc, Serial);
+  }
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", output);
+}
+
+void MaxBrightnessRequest() {
+  Serial.println("Received 'MaxBrightness' request");
+  Serial.flush();
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  // handle arguments/parameters of: ClientID & ClientTransactionID
+  if (server.hasArg("ClientID")) {
+    doc["ClientID"] = server.arg("ClientID");
+  }  
+  if (server.hasArg("ClientTransactionID")) {
+    doc["ClientTransactionID"] = server.arg("ClientTransactionID");
+  }
+
+  doc["ErrorNumber"] = 0;
+  doc["ErrorMessage"] = "";
+  doc["Value"] = MaxBrightness;  
+
+  String output;
+  serializeJson(doc, output);
+
+  if (DEBUG) {
+    serializeJson(doc, Serial);
+  }
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", output);
+}
+
+// ----- PUT REQUESTS -----
+void CalibratorOffRequest() {
+  Serial.println("Received 'CalibratorOFF' request");
+  Serial.flush();
+
+  // call function to turn LEDs off
+  TurnOff();
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  // handle arguments/parameters of: ClientID & ClientTransactionID
+  if (server.hasArg("ClientID")) {
+    doc["ClientID"] = server.arg("ClientID");
+  }  
+  if (server.hasArg("ClientTransactionID")) {
+    doc["ClientTransactionID"] = server.arg("ClientTransactionID");
+  }
+
+  doc["ErrorNumber"] = 0;
+  doc["ErrorMessage"] = "Failed updating the LEDs";
+
+  String output;
+  serializeJson(doc, output);
+
+  if (DEBUG) {
+    serializeJson(doc, Serial);
+  }
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", output);
+}
+
+void CalibratorOnRequest() {
+  Serial.println("Received 'CalibratorOn' request");
+  Serial.flush();
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  // handle arguments/parameters of: ClientID & ClientTransactionID
+  if (server.hasArg("ClientID")) {
+    doc["ClientID"] = server.arg("ClientID");
+  }  
+  if (server.hasArg("ClientTransactionID")) {
+    doc["ClientTransactionID"] = server.arg("ClientTransactionID");
+  }
+
+  int err_code = 0;
+  String error_msg = "";
+
+  // check argument, if brightness is within range and exist, we turn on, otherwise we throw error
+  if (!server.hasArg("Brightness")) {
+    server.send(400, "text/plain", "Missing Brightness value");
+    return;
+  }
+
+  int brightness = server.arg("Brightness").toInt();
+
+  // if operation was not true, then we set error here
+  if (brightness < 0 && brightness > 255) {
+    err_code = 0x80040401;
+    error_msg = "brightness outside range 0-255";
+  } else {
+    // no errors, so we comply with command
+    TurnOn(brightness);
+  }
+
+  doc["ErrorNumber"] = err_code;
+  doc["ErrorMessage"] = error_msg;
+
+  String output;
+  serializeJson(doc, output);
+
+  if (DEBUG) {
+    serializeJson(doc, Serial);
+  }
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", output);
+}
+
+void TurnOn(int brightness) {
+  // set all LEDs to specific colour
+  fill_solid(leds, NUM_LEDS, NEUTRAL_WHITE);
+  FastLED.setBrightness(brightness);
+  FastLED.show();
+}
+
+void TurnOff() {
+  FastLED.clear(true);
 }
