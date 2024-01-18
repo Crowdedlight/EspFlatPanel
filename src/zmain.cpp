@@ -48,10 +48,10 @@ enum States: int {
 };
 
 // LED CONTROL - FASTLED
-#define DATA_PIN  5
-#define CLOCK_PIN 13
+#define DATA_PIN  11
+#define CLOCK_PIN 10
 
-#define NUM_LEDS    50
+#define NUM_LEDS    60
 #define LED_TYPE    APA102
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
@@ -600,9 +600,9 @@ void CoverStateRequest() {
   handleTransactionAndClientIds(doc);
 
   JsonObject root = doc.to<JsonObject>();
-  doc["ErrorNumber"] = 0x400;
-  doc["ErrorMessage"] = "This device has no cover";
-  // doc["Value"] = States::NOT_PRESENT;  
+  doc["ErrorNumber"] = 0;
+  doc["ErrorMessage"] = "";
+  doc["Value"] = States::NOT_PRESENT;  
 
   String output;
   serializeJson(doc, output);
