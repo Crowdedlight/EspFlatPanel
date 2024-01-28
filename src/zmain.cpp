@@ -51,7 +51,7 @@ enum States: int {
 #define DATA_PIN  11
 #define CLOCK_PIN 10
 
-#define NUM_LEDS    60
+#define NUM_LEDS    59
 #define LED_TYPE    APA102
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
