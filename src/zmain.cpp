@@ -48,8 +48,8 @@ enum States: int {
 };
 
 // LED CONTROL - FASTLED
-#define DATA_PIN  11
-#define CLOCK_PIN 10
+#define DATA_PIN  18 //11 // change to SCK for spi hardware mode...
+#define CLOCK_PIN 23 //10 //change to MO for spi hardware mode...
 
 #define NUM_LEDS    59
 #define LED_TYPE    APA102
@@ -115,7 +115,9 @@ void setup ()
   delay(2000);
 
   // setup LEDs
-  FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);  // BGR ordering is typical
+  // FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);  // BGR ordering is typical
+  FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB, DATA_RATE_MHZ(5)>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip); 
+
   // clear all data and push to LEDs. So we start with them turned off. 
   FastLED.clear(true);
   FastLED.setBrightness(0);
