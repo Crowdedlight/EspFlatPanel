@@ -1,0 +1,6 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+#define _SSID "test"
+#define _PASSWORD "test"
+
+#endif
