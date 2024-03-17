@@ -48,8 +48,8 @@ enum States: int {
 };
 
 // LED CONTROL - FASTLED
-#define DATA_PIN  18 //11 // change to SCK for spi hardware mode...
-#define CLOCK_PIN 23 //10 //change to MO for spi hardware mode...
+#define DATA_PIN  23 
+#define CLOCK_PIN 18 
 
 #define NUM_LEDS    59
 #define LED_TYPE    APA102
